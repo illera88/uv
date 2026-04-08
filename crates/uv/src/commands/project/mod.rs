@@ -13,7 +13,7 @@ use uv_cache_key::cache_digest;
 use uv_client::{BaseClientBuilder, FlatIndexClient, RegistryClientBuilder};
 use uv_configuration::{
     Concurrency, Constraints, DependencyGroupsWithDefaults, DryRun, ExtrasSpecification,
-    GitLfsSetting, Reinstall, TargetTriple, Upgrade,
+    GitLfsSetting, Reinstall, TargetTriple,
 };
 use uv_dispatch::{BuildDispatch, SharedState};
 use uv_distribution::{DistributionDatabase, LoweredExtraBuildDependencies, LoweredRequirement};
@@ -2027,7 +2027,7 @@ pub(crate) async fn resolve_environment(
         extra_build_variables,
         exclude_newer,
         link_mode,
-        upgrade: _,
+        upgrade,
         build_options,
         sources,
         torch_backend,
@@ -2104,7 +2104,6 @@ pub(crate) async fn resolve_environment(
         .index_strategy(*index_strategy)
         .build_options(build_options.clone())
         .build();
-
     // TODO(charlie): These are all default values. We should consider whether we want to make them
     // optional on the downstream APIs.
     let extras = ExtrasSpecification::default();
@@ -2112,10 +2111,10 @@ pub(crate) async fn resolve_environment(
     let hasher = HashStrategy::default();
     let build_hasher = HashStrategy::default();
 
-    // When resolving from an interpreter, we assume an empty environment, so reinstalls and
-    // upgrades aren't relevant.
+    // When resolving from an interpreter, we assume an empty environment, so reinstalls aren't
+    // relevant.
     let reinstall = Reinstall::default();
-    let upgrade = Upgrade::default();
+    let upgrade = upgrade.clone();
 
     // If an existing lockfile exists, build up a set of preferences.
     let preferences = match spec.preferences {

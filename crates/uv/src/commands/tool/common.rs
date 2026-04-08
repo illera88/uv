@@ -10,26 +10,27 @@ use std::{
 use tracing::{debug, warn};
 use uv_cache::Cache;
 use uv_client::BaseClientBuilder;
-use uv_distribution_types::{InstalledDist, Name};
-use uv_distribution_types::{Requirement, RequirementSource};
+use uv_distribution_types::{InstalledDist, Name, Requirement, RequirementSource, StaticMetadata};
 use uv_fs::Simplified;
 #[cfg(unix)]
 use uv_fs::replace_symlink;
 use uv_installer::SitePackages;
-use uv_normalize::PackageName;
+use uv_normalize::{GroupName, PackageName};
 use uv_pep440::{Version, VersionSpecifier, VersionSpecifiers};
 use uv_preview::Preview;
 use uv_python::{
     EnvironmentPreference, Interpreter, PythonDownloads, PythonEnvironment, PythonInstallation,
     PythonPreference, PythonRequest, PythonVariant, VersionRequest,
 };
+use uv_requirements::RequirementsSpecification;
+use uv_resolver::{Lock, Preference, ResolverManifest, ResolverOutput};
 use uv_settings::{PythonInstallMirrors, ToolOptions};
 use uv_shell::Shell;
 use uv_tool::{InstalledTools, Tool, ToolEntrypoint, entrypoint_paths};
 use uv_warnings::warn_user_once;
 
 use crate::commands::pip;
-use crate::commands::project::ProjectError;
+use crate::commands::project::{EnvironmentSpecification, PreferenceLocation, ProjectError};
 use crate::commands::reporters::PythonDownloadReporter;
 use crate::printer::Printer;
 
@@ -101,6 +102,71 @@ pub(crate) fn normalize_tool_local_requirements(
             ..requirement
         })
         .collect()
+}
+
+/// Build the lock manifest for a tool receipt.
+pub(crate) fn tool_receipt_manifest(
+    requirements: &[Requirement],
+    constraints: &[Requirement],
+    overrides: &[Requirement],
+    excludes: &[PackageName],
+    build_constraints: &[Requirement],
+) -> ResolverManifest {
+    ResolverManifest::new(
+        std::iter::empty::<PackageName>(),
+        requirements.iter().cloned(),
+        constraints.iter().cloned(),
+        overrides.iter().cloned(),
+        excludes.iter().cloned(),
+        build_constraints.iter().cloned(),
+        std::iter::empty::<(GroupName, Vec<Requirement>)>(),
+        std::iter::empty::<StaticMetadata>(),
+    )
+}
+
+/// Build the receipt lock for a tool environment.
+pub(crate) fn tool_receipt_lock(
+    root: &Path,
+    resolution: &ResolverOutput,
+    manifest: &ResolverManifest,
+) -> Option<Lock> {
+    match Lock::from_resolution(resolution, root, vec![]) {
+        Ok(lock) => match manifest.clone().relative_to(root) {
+            Ok(manifest) => Some(lock.with_manifest(manifest)),
+            Err(err) => {
+                debug!("Failed to relativize tool receipt lock manifest: {err}");
+                None
+            }
+        },
+        Err(err) => {
+            debug!("Failed to build tool receipt lock: {err}");
+            None
+        }
+    }
+}
+
+/// Build an environment specification for a tool, preferring versions from the existing receipt
+/// lock when available, then falling back to the installed environment.
+pub(crate) fn tool_environment_spec<'lock>(
+    requirements: RequirementsSpecification,
+    tool: Option<&'lock Tool>,
+    install_path: &'lock Path,
+    site_packages: Option<&SitePackages>,
+) -> EnvironmentSpecification<'lock> {
+    let specification = EnvironmentSpecification::from(requirements);
+    if let Some(lock) = tool.and_then(Tool::lock) {
+        return specification.with_preferences(PreferenceLocation::Lock { lock, install_path });
+    }
+
+    let preferences = site_packages
+        .into_iter()
+        .flat_map(|site_packages| site_packages.iter().filter_map(Preference::from_installed))
+        .collect::<Vec<_>>();
+    if preferences.is_empty() {
+        return specification;
+    }
+
+    specification.with_preferences(PreferenceLocation::Entries(preferences))
 }
 
 /// Given a no-solution error and the [`Interpreter`] that was used during the solve, attempt to
@@ -213,6 +279,7 @@ pub(crate) fn finalize_tool_install(
     overrides: Vec<Requirement>,
     excludes: Vec<PackageName>,
     build_constraints: Vec<Requirement>,
+    lock: Option<Lock>,
     printer: Printer,
 ) -> anyhow::Result<()> {
     let executable_directory = uv_tool::tool_executable_dir()?;
@@ -371,6 +438,7 @@ pub(crate) fn finalize_tool_install(
         python,
         installed_entrypoints,
         options.clone(),
+        lock,
     );
     installed_tools.add_tool_receipt(name, tool)?;
 
