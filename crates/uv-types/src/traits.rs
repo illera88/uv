@@ -37,16 +37,16 @@ impl SourceTreeEditablePolicy {
     /// Return the default editable mode for implicit workspace members under this policy.
     pub fn default_editable(self) -> Option<bool> {
         match self {
-            Self::Ignore => None,
-            Self::Respect => Some(false),
+            Self::Ignore => Some(true),
+            Self::Respect => None,
         }
     }
 
     /// Return the editable mode for a specific source requirement under this policy.
     pub fn effective_editable(self, explicit: Option<bool>) -> Option<bool> {
         match self {
-            Self::Ignore => None,
-            Self::Respect => Some(explicit.unwrap_or(false)),
+            Self::Ignore => Some(true),
+            Self::Respect => explicit,
         }
     }
 }

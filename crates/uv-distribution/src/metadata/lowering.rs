@@ -321,7 +321,7 @@ impl LoweredRequirement {
                                         install_path: install_path.into_boxed_path(),
                                         url,
                                         editable: Some(
-                                            editability.unwrap_or(editable.unwrap_or(true)),
+                                            editability.unwrap_or(editable.unwrap_or(false)),
                                         ),
                                         r#virtual: Some(false),
                                     }
