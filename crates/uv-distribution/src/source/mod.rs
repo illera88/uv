@@ -45,7 +45,7 @@ use uv_pep440::{Version, release_specifiers_to_ranges};
 use uv_platform_tags::Tags;
 use uv_pypi_types::{HashAlgorithm, HashDigest, HashDigests, PyProjectToml, ResolutionMetadata};
 use uv_redacted::DisplaySafeUrl;
-use uv_types::{BuildContext, BuildKey, BuildStack, SourceBuildTrait};
+use uv_types::{BuildContext, BuildKey, BuildStack, EditableResolutionMode, SourceBuildTrait};
 use uv_workspace::pyproject::ToolUvSources;
 
 use crate::distribution_database::ManagedClient;
@@ -1281,13 +1281,10 @@ impl<'a, T: BuildContext> SourceDistributionBuilder<'a, T> {
             return Err(Error::HashesNotSupportedSourceTree(source.to_string()));
         }
 
-        // Project resolution intentionally keeps workspace-member lowering independent from the
-        // root package's editable install mode. Tool resolution opts in to respecting each local
-        // requirement's explicit editable choice instead.
-        let editable = self
-            .build_context
-            .source_tree_editable_policy()
-            .effective_editable(resource.editable);
+        let editable = match self.build_context.editable_resolution_mode() {
+            EditableResolutionMode::Project => true,
+            EditableResolutionMode::Tool => resource.editable.unwrap_or(false),
+        };
 
         // If the metadata is static, return it.
         let dynamic = match StaticMetadata::read(source, resource.install_path, None).await? {
@@ -1545,9 +1542,7 @@ impl<'a, T: BuildContext> SourceDistributionBuilder<'a, T> {
                     None,
                     self.build_context.locations(),
                     self.build_context.sources().clone(),
-                    self.build_context
-                        .source_tree_editable_policy()
-                        .default_editable(),
+                    self.build_context.editable_resolution_mode().is_editable(),
                     self.build_context.workspace_cache(),
                     credentials_cache,
                 )
@@ -1870,9 +1865,7 @@ impl<'a, T: BuildContext> SourceDistributionBuilder<'a, T> {
                             Some(&git_member),
                             self.build_context.locations(),
                             self.build_context.sources().clone(),
-                            self.build_context
-                                .source_tree_editable_policy()
-                                .default_editable(),
+                            self.build_context.editable_resolution_mode().is_editable(),
                             self.build_context.workspace_cache(),
                             credentials_cache,
                         )
@@ -1907,9 +1900,7 @@ impl<'a, T: BuildContext> SourceDistributionBuilder<'a, T> {
                                 Some(&git_member),
                                 self.build_context.locations(),
                                 self.build_context.sources().clone(),
-                                self.build_context
-                                    .source_tree_editable_policy()
-                                    .default_editable(),
+                                self.build_context.editable_resolution_mode().is_editable(),
                                 self.build_context.workspace_cache(),
                                 credentials_cache,
                             )
@@ -1963,9 +1954,7 @@ impl<'a, T: BuildContext> SourceDistributionBuilder<'a, T> {
                     Some(&git_member),
                     self.build_context.locations(),
                     self.build_context.sources().clone(),
-                    self.build_context
-                        .source_tree_editable_policy()
-                        .default_editable(),
+                    self.build_context.editable_resolution_mode().is_editable(),
                     self.build_context.workspace_cache(),
                     credentials_cache,
                 )
@@ -2028,9 +2017,7 @@ impl<'a, T: BuildContext> SourceDistributionBuilder<'a, T> {
                 Some(&git_member),
                 self.build_context.locations(),
                 self.build_context.sources().clone(),
-                self.build_context
-                    .source_tree_editable_policy()
-                    .default_editable(),
+                self.build_context.editable_resolution_mode().is_editable(),
                 self.build_context.workspace_cache(),
                 credentials_cache,
             )

@@ -21,7 +21,7 @@ use uv_python::{
 use uv_requirements::RequirementsSpecification;
 use uv_settings::{Combine, PythonInstallMirrors, ResolverInstallerOptions, ToolOptions};
 use uv_tool::{InstalledTools, Tool};
-use uv_types::SourceTreeEditablePolicy;
+use uv_types::EditableResolutionMode;
 use uv_warnings::write_error_chain;
 use uv_workspace::WorkspaceCache;
 
@@ -353,7 +353,7 @@ async fn upgrade_tool(
             spec.into(),
             interpreter,
             python_platform,
-            SourceTreeEditablePolicy::Explicit,
+            EditableResolutionMode::Tool,
             build_constraints.clone(),
             &settings.resolver,
             client_builder,
@@ -399,7 +399,7 @@ async fn upgrade_tool(
             spec,
             Modifications::Exact,
             python_platform,
-            SourceTreeEditablePolicy::Explicit,
+            EditableResolutionMode::Tool,
             build_constraints,
             ExtraBuildRequires::default(),
             &settings,

@@ -35,8 +35,8 @@ use uv_resolver::{
     PythonRequirement, Resolver, ResolverEnvironment,
 };
 use uv_types::{
-    AnyErrorBuild, BuildArena, BuildContext, BuildIsolation, BuildStack, EmptyInstalledPackages,
-    HashStrategy, InFlight, SourceTreeEditablePolicy,
+    AnyErrorBuild, BuildArena, BuildContext, BuildIsolation, BuildStack, EditableResolutionMode,
+    EmptyInstalledPackages, HashStrategy, InFlight,
 };
 use uv_workspace::WorkspaceCache;
 
@@ -98,7 +98,7 @@ pub struct BuildDispatch<'a> {
     source_build_context: SourceBuildContext,
     build_extra_env_vars: FxHashMap<OsString, OsString>,
     sources: NoSources,
-    source_tree_editable_policy: SourceTreeEditablePolicy,
+    editable_resolution_mode: EditableResolutionMode,
     workspace_cache: WorkspaceCache,
     concurrency: Concurrency,
     preview: Preview,
@@ -125,7 +125,7 @@ impl<'a> BuildDispatch<'a> {
         hasher: &'a HashStrategy,
         exclude_newer: ExcludeNewer,
         sources: NoSources,
-        source_tree_editable_policy: SourceTreeEditablePolicy,
+        editable_resolution_mode: EditableResolutionMode,
         workspace_cache: WorkspaceCache,
         concurrency: Concurrency,
         preview: Preview,
@@ -152,7 +152,7 @@ impl<'a> BuildDispatch<'a> {
             source_build_context: SourceBuildContext::new(concurrency.builds_semaphore.clone()),
             build_extra_env_vars: FxHashMap::default(),
             sources,
-            source_tree_editable_policy,
+            editable_resolution_mode,
             workspace_cache,
             concurrency,
             preview,
@@ -223,8 +223,8 @@ impl BuildContext for BuildDispatch<'_> {
         &self.sources
     }
 
-    fn source_tree_editable_policy(&self) -> SourceTreeEditablePolicy {
-        self.source_tree_editable_policy
+    fn editable_resolution_mode(&self) -> EditableResolutionMode {
+        self.editable_resolution_mode
     }
 
     fn locations(&self) -> &IndexLocations {

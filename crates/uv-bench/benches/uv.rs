@@ -135,9 +135,7 @@ mod resolver {
         ExcludeNewer, FlatIndex, InMemoryIndex, Manifest, OptionsBuilder, PythonRequirement,
         Resolver, ResolverEnvironment, ResolverOutput,
     };
-    use uv_types::{
-        BuildIsolation, EmptyInstalledPackages, HashStrategy, SourceTreeEditablePolicy,
-    };
+    use uv_types::{BuildIsolation, EditableResolutionMode, EmptyInstalledPackages, HashStrategy};
     use uv_workspace::WorkspaceCache;
 
     static MARKERS: LazyLock<MarkerEnvironment> = LazyLock::new(|| {
@@ -240,7 +238,7 @@ mod resolver {
             &hashes,
             exclude_newer,
             sources,
-            SourceTreeEditablePolicy::Editable,
+            EditableResolutionMode::Project,
             workspace_cache,
             concurrency.clone(),
             Preview::default(),

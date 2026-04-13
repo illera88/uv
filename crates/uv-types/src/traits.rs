@@ -21,33 +21,24 @@ use uv_workspace::WorkspaceCache;
 
 use crate::{BuildArena, BuildIsolation};
 
-/// Controls how workspace members are installed: editable by default, or only when explicitly
-/// requested.
+/// Whether we are resolving for a project or a tool.
+///
+/// In project mode, workspace members are installed as editable by default. In tool mode,
+/// workspace members are installed as non-editable by default.
 #[derive(Debug, Clone, Copy, Default, Eq, PartialEq)]
-pub enum SourceTreeEditablePolicy {
-    /// Install workspace members as editable.
+pub enum EditableResolutionMode {
+    /// Project mode: workspace members are editable by default.
     #[default]
-    Editable,
+    Project,
 
-    /// Install workspace members as non-editable, unless an explicit editable setting is provided.
-    Explicit,
+    /// Tool mode: workspace members are non-editable by default.
+    Tool,
 }
 
-impl SourceTreeEditablePolicy {
-    /// Return the default editable mode for implicit workspace members under this policy.
-    pub fn default_editable(self) -> Option<bool> {
-        match self {
-            Self::Editable => Some(true),
-            Self::Explicit => None,
-        }
-    }
-
-    /// Return the editable mode for a specific source requirement under this policy.
-    pub fn effective_editable(self, explicit: Option<bool>) -> Option<bool> {
-        match self {
-            Self::Editable => Some(true),
-            Self::Explicit => explicit,
-        }
+impl EditableResolutionMode {
+    /// Whether workspace members should be installed as editable by default.
+    pub fn is_editable(self) -> bool {
+        matches!(self, Self::Project)
     }
 }
 
@@ -129,9 +120,9 @@ pub trait BuildContext {
     /// Whether to incorporate `tool.uv.sources` when resolving requirements.
     fn sources(&self) -> &NoSources;
 
-    /// How source tree requirements should influence workspace-member editability.
-    fn source_tree_editable_policy(&self) -> SourceTreeEditablePolicy {
-        SourceTreeEditablePolicy::Editable
+    /// Whether we are resolving for a project or a tool.
+    fn editable_resolution_mode(&self) -> EditableResolutionMode {
+        EditableResolutionMode::Project
     }
 
     /// The index locations being searched.

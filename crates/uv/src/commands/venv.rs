@@ -29,7 +29,7 @@ use uv_resolver::{ExcludeNewer, FlatIndex};
 use uv_settings::PythonInstallMirrors;
 use uv_shell::{Shell, shlex_posix, shlex_windows};
 use uv_types::{
-    AnyErrorBuild, BuildContext, BuildIsolation, BuildStack, HashStrategy, SourceTreeEditablePolicy,
+    AnyErrorBuild, BuildContext, BuildIsolation, BuildStack, EditableResolutionMode, HashStrategy,
 };
 use uv_virtualenv::OnExisting;
 use uv_warnings::warn_user;
@@ -274,7 +274,7 @@ pub(crate) async fn venv(
             &build_hasher,
             exclude_newer,
             sources,
-            SourceTreeEditablePolicy::Editable,
+            EditableResolutionMode::Project,
             workspace_cache.clone(),
             concurrency,
             preview,
