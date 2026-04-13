@@ -795,7 +795,7 @@ async fn do_lock(
         &build_hasher,
         exclude_newer.clone(),
         sources.clone(),
-        SourceTreeEditablePolicy::Ignore,
+        SourceTreeEditablePolicy::Editable,
         workspace_cache.clone(),
         concurrency.clone(),
         preview,

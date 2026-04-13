@@ -240,7 +240,7 @@ mod resolver {
             &hashes,
             exclude_newer,
             sources,
-            SourceTreeEditablePolicy::Ignore,
+            SourceTreeEditablePolicy::Editable,
             workspace_cache,
             concurrency.clone(),
             Preview::default(),
